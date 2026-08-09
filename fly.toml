@@ -1,0 +1,34 @@
+# Fly.io deployment config. See README "النشر السحابي المجاني" section for
+# the full step-by-step guide.
+#
+# IMPORTANT: this app stores all data as files on disk (JSON records +
+# uploaded documents/photos). Without the persistent volume mounted below,
+# every restart or redeploy silently wipes all data. Do not remove the
+# [[mounts]] section or run this without creating the volume first.
+
+app = "frt-rescue-system"  # change to your own unique app name
+primary_region = "iad"     # pick the region closest to your team
+
+[build]
+
+[env]
+  PORT = "5000"
+  DATA_DIR = "/data/app-data"
+  UPLOADS_DIR = "/data/uploads"
+  SECRET_KEY_PATH = "/data/secret.key"
+  TRUST_PROXY = "true"  # Fly.io terminates TLS in front of your app
+
+[[mounts]]
+  source = "frt_data"      # created once via: fly volumes create frt_data --size 1
+  destination = "/data"
+
+[http_service]
+  internal_port = 5000
+  force_https = true
+  auto_stop_machines = "off"   # keep the one machine holding your data running
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

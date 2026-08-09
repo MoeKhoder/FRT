@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+server/data
+server/uploads
+server/secret.key
+server/.env
+**/*.log
+.git

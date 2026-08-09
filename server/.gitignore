@@ -1,0 +1,8 @@
+node_modules/
+secret.key
+data/sessions.json
+.env
+uploads/documents/*
+uploads/photos/*
+!uploads/documents/.gitkeep
+!uploads/photos/.gitkeep

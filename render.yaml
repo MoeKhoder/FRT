@@ -1,0 +1,36 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec).
+#
+# IMPORTANT — read before deploying:
+# This defaults to the Starter plan with a persistent disk attached. That is
+# a deliberate choice, not an oversight: Render's FREE plan does not support
+# persistent disks at all, meaning every restart/redeploy wipes all data
+# (JSON records + uploaded documents/photos) with no way to prevent it. The
+# ~$7.50/month here is what actually keeps your team's data intact, not an
+# upsell — see README "النشر على Render" for the full explanation.
+#
+# If you deploy this via the Render dashboard ("New +" -> "Blueprint"), it
+# will read this file automatically and set everything up, including the
+# disk mount. You only need to enter your GitHub repo URL.
+
+services:
+  - type: web
+    name: frt-rescue-system
+    runtime: docker
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "5000"
+      - key: DATA_DIR
+        value: /var/data/app-data
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      - key: SECRET_KEY_PATH
+        value: /var/data/secret.key
+      - key: TRUST_PROXY
+        value: "true"
+    disk:
+      name: frt-data
+      mountPath: /var/data
+      sizeGB: 1
