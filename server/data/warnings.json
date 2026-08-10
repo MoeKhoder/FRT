@@ -1,0 +1,32 @@
+[
+  {
+    "id": "mshbex8linvmkxor",
+    "date": "2026-08-06",
+    "severity": "تنبيه بسيط",
+    "reason": "testing warnings",
+    "notes": "",
+    "memberId": "msg6zcq05xtbwldy",
+    "createdAt": "2026-08-06T09:30:12.549Z",
+    "createdBy": "mohamad.khoder"
+  },
+  {
+    "id": "mshbf5t8mpoj3nyw",
+    "date": "2026-08-06",
+    "severity": "إنذار",
+    "reason": "major warning",
+    "notes": "",
+    "memberId": "msg6zcq05xtbwldy",
+    "createdAt": "2026-08-06T09:30:23.660Z",
+    "createdBy": "mohamad.khoder"
+  },
+  {
+    "id": "mshbfdpzsme4jmlt",
+    "date": "2026-08-06",
+    "severity": "إنذار نهائي",
+    "reason": "final warning",
+    "notes": "",
+    "memberId": "msg6zcq05xtbwldy",
+    "createdAt": "2026-08-06T09:30:33.911Z",
+    "createdBy": "mohamad.khoder"
+  }
+]

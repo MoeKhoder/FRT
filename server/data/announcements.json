@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg7d9oqch7olba5",
+    "title": "testing ann",
+    "body": "test",
+    "priority": "مهم",
+    "createdAt": "2026-08-05T14:49:10.730Z",
+    "createdBy": "mohamad.khoder"
+  },
+  {
+    "id": "mskmrs15i30qn9s4",
+    "title": "announcement for recovery",
+    "body": "ddddd",
+    "priority": "عادية",
+    "createdAt": "2026-08-08T17:11:26.633Z",
+    "createdBy": "mohamad.khoder"
+  }
+]

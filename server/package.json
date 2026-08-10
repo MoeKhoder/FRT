@@ -1,0 +1,21 @@
+{
+  "name": "rescue-server",
+  "version": "1.0.0",
+  "description": "First Rescue Log - Al Joumeh backend (local JSON storage)",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "seed": "node seed.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0",
+    "multer": "^2.2.0",
+    "uuid": "^14.0.1"
+  }
+}

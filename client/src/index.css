@@ -1,0 +1,109 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cairo", "Segoe UI", sans-serif;
+  --font-body: "Cairo", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-night-950: #0a0f1c;
+  --color-night-900: #0d1321;
+  --color-night-800: #131c30;
+  --color-night-700: #1a2540;
+  --color-night-600: #26314a;
+  --color-night-500: #3a4966;
+
+  --color-mist-100: #f5f7fa;
+  --color-mist-200: #e8ecf2;
+  --color-mist-300: #cbd3e0;
+  --color-mist-400: #8b95a7;
+
+  --color-rescue-600: #b3070f;
+  --color-rescue-500: #d80a17;
+  --color-rescue-400: #ea4a4f;
+
+  --color-safe-600: #0b7a37;
+  --color-safe-500: #109441;
+  --color-safe-400: #3fb968;
+
+  --color-amber-600: #d18a00;
+  --color-amber-500: #f4a300;
+  --color-amber-400: #ffbf3f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-body);
+}
+
+body {
+  margin: 0;
+  background: var(--color-night-900);
+  color: var(--color-mist-100);
+  min-height: 100vh;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+body.light {
+  background: var(--color-mist-100);
+  color: var(--color-night-900);
+}
+
+::selection {
+  background: var(--color-rescue-500);
+  color: white;
+}
+
+/* Signature element: a pulsing "vitals" waveform used as a rescue/dispatch motif */
+.pulse-line {
+  position: relative;
+  height: 2px;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-rescue-500) 20%,
+    var(--color-safe-500) 50%,
+    var(--color-rescue-500) 80%,
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: pulse-shift 3.5s linear infinite;
+}
+@keyframes pulse-shift {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-line { animation: none; }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--color-night-600); border-radius: 4px; }
+body.light ::-webkit-scrollbar-thumb { background: var(--color-mist-300); }
+
+.num {
+  font-family: var(--font-mono);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body,
+  body.light {
+    background: white !important;
+    color: black !important;
+  }
+  .print-page {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

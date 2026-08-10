@@ -1,0 +1,38 @@
+[
+  {
+    "id": "msg51vgzt7vw2fab",
+    "username": "mohamad.khoder",
+    "fullName": "Mohamad Khoder",
+    "passwordHash": "a24dd503fc4a4a53754b5c0ed5a4bea1fbd58faff8391911b64c3febbe5261d731a031f84f9ddcc04da600a1cbf080d7408c00764c4570f7202c5b25b9dd3b75",
+    "salt": "363a421f22acc54786752d1bf1e3f25e",
+    "role": "IT",
+    "active": true,
+    "mustChangePassword": false,
+    "createdAt": "2026-08-05T13:44:19.860Z",
+    "lastLogin": "2026-08-08T17:07:11.498Z"
+  },
+  {
+    "id": "msg7egjebjb287h8",
+    "username": "hind.bachir",
+    "fullName": "Hind Bachir",
+    "passwordHash": "b8cc0d99fab69497502cb729c6431bcf78e2950698b3d8849f22c80ff835a05c99c2906d648c64849e05f62793913d52eb0ad28fd9695c0486d65b0b8ace73c5",
+    "salt": "aed7fde21f9046cb6498256f4fd5336a",
+    "role": "Administrator",
+    "active": true,
+    "mustChangePassword": true,
+    "createdAt": "2026-08-05T14:50:06.266Z",
+    "lastLogin": "2026-08-08T17:24:20.047Z",
+    "permissions": {
+      "map": "none",
+      "members": "manage",
+      "missions": "view",
+      "inventory": "view",
+      "hazards": "none",
+      "facilities": "view",
+      "announcements": "view",
+      "reports": "view",
+      "ratings": "view",
+      "surveys": "view"
+    }
+  }
+]

@@ -1,0 +1,22 @@
+# Netlify config for hosting ONLY the frontend (client/). The backend
+# (server/) cannot run on Netlify — see README "استضافة الواجهة على Netlify"
+# for why — this pairs with a backend already running elsewhere (Oracle
+# Cloud, Google Cloud, etc.) via VITE_API_URL below.
+
+[build]
+  base = "client"
+  command = "npm run build"
+  publish = "client/dist"
+
+# Client-side routing (React Router) needs every path to fall back to
+# index.html, same reason the Express server has its own SPA fallback.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build.environment]
+  # Set this in the Netlify dashboard (Site settings -> Environment
+  # variables) instead of committing your server's real URL here:
+  #   VITE_API_URL = https://your-domain-or-ip-from-the-backend-guide
+  NODE_VERSION = "22"
