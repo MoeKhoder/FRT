@@ -1,14 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiChevronUp, FiChevronDown, FiChevronRight, FiChevronLeft } from "react-icons/fi";
-import { Input } from "./Primitives";
+import { Input, Select } from "./Primitives";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export default function DataTable({ columns, data, searchKeys = [], emptyLabel = "لا توجد بيانات" }) {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtered = useMemo(() => {
     let rows = data;
@@ -30,8 +31,15 @@ export default function DataTable({ columns, data, searchKeys = [], emptyLabel =
     return rows;
   }, [data, query, searchKeys, sortKey, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const effectivePageSize = pageSize === "all" ? Math.max(filtered.length, 1) : pageSize;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / effectivePageSize));
+
+  // keep current page valid if pageSize/filter shrinks the result set
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
+
+  const pageRows = filtered.slice((page - 1) * effectivePageSize, page * effectivePageSize);
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -44,20 +52,42 @@ export default function DataTable({ columns, data, searchKeys = [], emptyLabel =
 
   return (
     <div>
-      {searchKeys.length > 0 && (
-        <div className="mb-3 relative max-w-xs">
-          <FiSearch className="absolute top-1/2 -translate-y-1/2 right-3 text-mist-400" size={16} />
-          <Input
-            placeholder="بحث..."
-            value={query}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        {searchKeys.length > 0 ? (
+          <div className="relative max-w-xs flex-1 min-w-[160px]">
+            <FiSearch className="absolute top-1/2 -translate-y-1/2 right-3 text-mist-400" size={16} />
+            <Input
+              placeholder="بحث..."
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              className="pr-9"
+            />
+          </div>
+        ) : (
+          <div />
+        )}
+        <label className="flex items-center gap-2 text-sm text-mist-400 shrink-0">
+          عرض
+          <Select
+            value={pageSize}
             onChange={(e) => {
-              setQuery(e.target.value);
+              const v = e.target.value === "all" ? "all" : Number(e.target.value);
+              setPageSize(v);
               setPage(1);
             }}
-            className="pr-9"
-          />
-        </div>
-      )}
+            className="w-auto py-1.5"
+          >
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+            <option value="all">الكل</option>
+          </Select>
+          سجل
+        </label>
+      </div>
       <div className="overflow-x-auto rounded-xl border border-night-700 [body.light_&]:border-mist-200">
         <table className="w-full text-sm">
           <thead>

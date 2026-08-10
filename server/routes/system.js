@@ -38,7 +38,9 @@ router.get("/stats", requireAuth, (req, res) => {
   const missions = readJSON("missions");
   const inventory = readJSON("inventory");
   const ratings = readJSON("ratings");
-  const announcements = readJSON("announcements");
+  const announcements = readJSON("announcements").sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
   const logs = readJSON("systemLogs");
 
   const activeMissions = missions.filter((m) => m.status === "قيد التنفيذ").length;

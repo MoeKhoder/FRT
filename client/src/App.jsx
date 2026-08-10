@@ -21,6 +21,7 @@ import AuditLog from "./pages/AuditLog";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import MemberPrintView from "./pages/MemberPrintView";
+import AnnouncementPrintView from "./pages/AnnouncementPrintView";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
@@ -37,6 +38,15 @@ export default function App() {
                 element={
                   <ProtectedRoute feature="members">
                     <MemberPrintView />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/announcements/:id/print"
+                element={
+                  <ProtectedRoute feature="announcements">
+                    <AnnouncementPrintView />
                   </ProtectedRoute>
                 }
               />

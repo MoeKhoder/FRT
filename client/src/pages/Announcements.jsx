@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FiPlus, FiTrash2, FiBell } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiBell, FiDownload } from "react-icons/fi";
 import api from "../services/api";
 import { Button, Input, Select, Textarea, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
@@ -21,7 +21,10 @@ export default function Announcements() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const load = () => api.get("/announcements").then((res) => setItems(res.data.slice().reverse()));
+  const load = () =>
+    api.get("/announcements").then((res) =>
+      setItems(res.data.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
+    );
   useEffect(() => {
     load();
   }, []);
@@ -82,11 +85,20 @@ export default function Announcements() {
               <p className="text-sm text-mist-300 mt-1">{a.body}</p>
               <div className="text-xs text-mist-400 mt-2 num">{formatDateTime(a.createdAt)} · {a.createdBy}</div>
             </div>
-            {canWrite && (
-              <button onClick={() => setDeleteTarget(a)} className="p-1.5 rounded-lg hover:bg-rescue-500/10 text-rescue-400">
-                <FiTrash2 size={16} />
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => window.open(`/announcements/${a.id}/print`, "_blank")}
+                title="تصدير PDF"
+                className="p-1.5 rounded-lg hover:bg-night-700 text-mist-400 [body.light_&]:hover:bg-mist-100"
+              >
+                <FiDownload size={16} />
               </button>
-            )}
+              {canWrite && (
+                <button onClick={() => setDeleteTarget(a)} className="p-1.5 rounded-lg hover:bg-rescue-500/10 text-rescue-400">
+                  <FiTrash2 size={16} />
+                </button>
+              )}
+            </div>
           </Card>
         ))}
       </div>

@@ -22,7 +22,14 @@ export default function Topbar({ onMenuClick }) {
   useEffect(() => {
     api
       .get("/announcements")
-      .then((res) => setAnnouncements(res.data.slice(-5).reverse()))
+      .then((res) =>
+        setAnnouncements(
+          res.data
+            .slice()
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 5)
+        )
+      )
       .catch(() => {});
   }, []);
 
