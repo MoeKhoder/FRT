@@ -44,7 +44,22 @@ export default function Members() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+<<<<<<< HEAD
   const load = () => api.get("/members").then((res) => setMembers(res.data));
+=======
+  const load = () =>
+    Promise.allSettled([api.get("/members"), api.get("/missions")]).then(([mRes, missionsRes]) => {
+      const memberRows = mRes.status === "fulfilled" ? mRes.value.data : [];
+      const missions = missionsRes.status === "fulfilled" ? missionsRes.value.data : [];
+      const withCounts = memberRows.map((m) => ({
+        ...m,
+        missionCount: missions.filter(
+          (mi) => (mi.members || []).includes(m.id) || mi.leader === m.id || mi.coLeader === m.id
+        ).length,
+      }));
+      setMembers(withCounts);
+    });
+>>>>>>> 05a7b7476b977115b9ad0a6b1f2bb5b987b6c644
   useEffect(() => {
     load();
   }, []);
