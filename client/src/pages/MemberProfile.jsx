@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   FiArrowRight, FiPhone, FiDroplet, FiMapPin, FiCalendar, FiStar, FiCamera,
-  FiFile, FiUpload, FiTrash2, FiAlertTriangle, FiPlus, FiDownload, FiFileText,
+  FiFile, FiUpload, FiTrash2, FiAlertTriangle, FiPlus, FiDownload, FiFileText, FiEdit2,
 } from "react-icons/fi";
 import api, { withAuthToken } from "../services/api";
 import { Card, Badge, Spinner, Button, Input, Select, Textarea } from "../components/ui/Primitives";
@@ -13,8 +13,8 @@ import { can } from "../utils/permissions";
 import { formatDate, formatDateTime } from "../utils/dateFormat";
 
 const DOC_TYPES = ["هوية", "شهادة ميلاد", "نموذج طبي", "رخصة قيادة", "شهادة تدريب", "شهادة إنقاذ", "تأمين", "أخرى"];
-const WARNING_SEVERITIES = ["تنبيه بسيط", "إنذار", "إنذار نهائي"];
-const SEVERITY_TONE = { "تنبيه بسيط": "amber", إنذار: "rescue", "إنذار نهائي": "rescue" };
+const WARNING_SEVERITIES = ["ملاحظة شفهية", "تنبيه بسيط", "إنذار", "إنذار نهائي"];
+const SEVERITY_TONE = { "ملاحظة شفهية": "neutral", "تنبيه بسيط": "amber", إنذار: "rescue", "إنذار نهائي": "rescue" };
 
 export default function MemberProfile() {
   const { id } = useParams();
@@ -41,7 +41,9 @@ export default function MemberProfile() {
   const [deleteDocTarget, setDeleteDocTarget] = useState(null);
 
   const [warnModalOpen, setWarnModalOpen] = useState(false);
-  const [warnForm, setWarnForm] = useState({ date: new Date().toISOString().slice(0, 10), severity: "تنبيه بسيط", reason: "", notes: "" });
+  const [editingWarn, setEditingWarn] = useState(null);
+  const EMPTY_WARN = { date: new Date().toISOString().slice(0, 10), severity: "تنبيه بسيط", reason: "", notes: "", endDate: "" };
+  const [warnForm, setWarnForm] = useState(EMPTY_WARN);
   const [savingWarn, setSavingWarn] = useState(false);
   const [deleteWarnTarget, setDeleteWarnTarget] = useState(null);
 
@@ -71,11 +73,20 @@ export default function MemberProfile() {
   const onPhotoChosen = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      push("حجم الصورة كبير جداً (الحد الأقصى 3 ميغابايت)", "error");
+      if (photoInput.current) photoInput.current.value = "";
+      return;
+    }
     setUploadingPhoto(true);
     try {
-      const fd = new FormData();
-      fd.append("photo", file);
-      const res = await api.post(`/members/${id}/photo`, fd);
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await api.post(`/members/${id}/photo`, { photoDataUrl: dataUrl });
       setMember(res.data);
       push("تم تحديث الصورة", "success");
     } catch (err) {
@@ -124,14 +135,38 @@ export default function MemberProfile() {
     }
   };
 
+  const openCreateWarn = () => {
+    setEditingWarn(null);
+    setWarnForm(EMPTY_WARN);
+    setWarnModalOpen(true);
+  };
+
+  const openEditWarn = (w) => {
+    setEditingWarn(w);
+    setWarnForm({
+      date: w.date || "",
+      severity: w.severity || "تنبيه بسيط",
+      reason: w.reason || "",
+      notes: w.notes || "",
+      endDate: w.endDate || "",
+    });
+    setWarnModalOpen(true);
+  };
+
   const submitWarning = async (e) => {
     e.preventDefault();
     setSavingWarn(true);
     try {
-      await api.post("/warnings", { ...warnForm, memberId: id });
-      push("تم تسجيل الإنذار", "success");
+      if (editingWarn) {
+        await api.put(`/warnings/${editingWarn.id}`, warnForm);
+        push("تم تحديث الإنذار", "success");
+      } else {
+        await api.post("/warnings", { ...warnForm, memberId: id });
+        push("تم تسجيل الإنذار", "success");
+      }
       setWarnModalOpen(false);
-      setWarnForm({ date: new Date().toISOString().slice(0, 10), severity: "تنبيه بسيط", reason: "", notes: "" });
+      setEditingWarn(null);
+      setWarnForm(EMPTY_WARN);
       load();
     } catch (err) {
       push(err.response?.data?.error || "تعذر الحفظ", "error");
@@ -173,7 +208,7 @@ export default function MemberProfile() {
       <Card className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
         <div className="relative shrink-0">
           {member.photoUrl ? (
-            <img src={withAuthToken(member.photoUrl)} alt={member.firstName} className="w-20 h-20 rounded-2xl object-cover" />
+            <img src={member.photoUrl} alt={member.firstName} className="w-20 h-20 rounded-2xl object-cover" />
           ) : (
             <div className="w-20 h-20 rounded-2xl bg-rescue-500/15 text-rescue-400 flex items-center justify-center text-3xl font-extrabold">
               {member.firstName?.[0]}
@@ -275,31 +310,44 @@ export default function MemberProfile() {
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold flex items-center gap-2"><FiAlertTriangle size={16} className="text-rescue-400" /> الإنذارات</h3>
           {canWrite && (
-            <Button variant="secondary" onClick={() => setWarnModalOpen(true)}>
+            <Button variant="secondary" onClick={openCreateWarn}>
               <FiPlus size={14} /> إضافة إنذار
             </Button>
           )}
         </div>
         {warnings.length === 0 && <p className="text-sm text-mist-400">لا توجد إنذارات مسجلة</p>}
         <div className="flex flex-col divide-y divide-night-700 [body.light_&]:divide-mist-200">
-          {warnings.map((w) => (
-            <div key={w.id} className="py-3 flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Badge tone={SEVERITY_TONE[w.severity] || "neutral"}>{w.severity}</Badge>
-                  <span className="text-xs text-mist-400 num">{formatDate(w.date)}</span>
+          {warnings.map((w) => {
+            const isExpired = w.endDate && new Date(w.endDate) < new Date(new Date().toDateString());
+            return (
+              <div key={w.id} className="py-3 flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge tone={SEVERITY_TONE[w.severity] || "neutral"}>{w.severity}</Badge>
+                    {w.endDate && (
+                      <Badge tone={isExpired ? "safe" : "amber"}>
+                        {isExpired ? `انتهى في ${formatDate(w.endDate)}` : `ساري حتى ${formatDate(w.endDate)}`}
+                      </Badge>
+                    )}
+                    <span className="text-xs text-mist-400 num">{formatDate(w.date)}</span>
+                  </div>
+                  <p className="text-sm font-medium mt-1.5">{w.reason}</p>
+                  {w.notes && <p className="text-xs text-mist-400 mt-0.5">{w.notes}</p>}
+                  <p className="text-xs text-mist-400 mt-1">بواسطة {w.createdBy}</p>
                 </div>
-                <p className="text-sm font-medium mt-1.5">{w.reason}</p>
-                {w.notes && <p className="text-xs text-mist-400 mt-0.5">{w.notes}</p>}
-                <p className="text-xs text-mist-400 mt-1">بواسطة {w.createdBy}</p>
+                {canWrite && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => openEditWarn(w)} className="p-1.5 rounded-lg hover:bg-night-700 text-mist-400 [body.light_&]:hover:bg-mist-100">
+                      <FiEdit2 size={14} />
+                    </button>
+                    <button onClick={() => setDeleteWarnTarget(w)} className="p-1.5 rounded-lg hover:bg-rescue-500/10 text-rescue-400">
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
-              {canWrite && (
-                <button onClick={() => setDeleteWarnTarget(w)} className="p-1.5 rounded-lg hover:bg-rescue-500/10 text-rescue-400 shrink-0">
-                  <FiTrash2 size={14} />
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 
@@ -365,7 +413,14 @@ export default function MemberProfile() {
         </form>
       </Modal>
 
-      <Modal open={warnModalOpen} onClose={() => setWarnModalOpen(false)} title="إضافة إنذار">
+      <Modal
+        open={warnModalOpen}
+        onClose={() => {
+          setWarnModalOpen(false);
+          setEditingWarn(null);
+        }}
+        title={editingWarn ? "تعديل إنذار" : "إضافة إنذار"}
+      >
         <form onSubmit={submitWarning} className="flex flex-col gap-4">
           <Select label="الدرجة" value={warnForm.severity} onChange={(e) => setWarnForm({ ...warnForm, severity: e.target.value })}>
             {WARNING_SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -373,8 +428,34 @@ export default function MemberProfile() {
           <Input label="التاريخ" type="date" value={warnForm.date} onChange={(e) => setWarnForm({ ...warnForm, date: e.target.value })} />
           <Input label="السبب" required value={warnForm.reason} onChange={(e) => setWarnForm({ ...warnForm, reason: e.target.value })} />
           <Textarea label="ملاحظات إضافية" rows={2} value={warnForm.notes} onChange={(e) => setWarnForm({ ...warnForm, notes: e.target.value })} />
+          <div>
+            <Input
+              label="ساري حتى (اختياري — لإجراء محدود المدة مثل التوقيف المؤقت)"
+              type="date"
+              value={warnForm.endDate}
+              onChange={(e) => setWarnForm({ ...warnForm, endDate: e.target.value })}
+            />
+            {warnForm.endDate && (
+              <button
+                type="button"
+                onClick={() => setWarnForm({ ...warnForm, endDate: "" })}
+                className="text-xs text-rescue-400 hover:underline mt-1"
+              >
+                إزالة تاريخ الانتهاء (إجراء دائم)
+              </button>
+            )}
+          </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setWarnModalOpen(false)}>إلغاء</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setWarnModalOpen(false);
+                setEditingWarn(null);
+              }}
+            >
+              إلغاء
+            </Button>
             <Button type="submit" disabled={savingWarn}>حفظ</Button>
           </div>
         </form>

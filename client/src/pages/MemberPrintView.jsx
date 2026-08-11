@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FiPrinter, FiStar, FiAlertTriangle } from "react-icons/fi";
-import api, { withAuthToken } from "../services/api";
+import api from "../services/api";
 import { Spinner, Button, Badge } from "../components/ui/Primitives";
 import { formatDate, formatDateTime } from "../utils/dateFormat";
 
-const SEVERITY_TONE = { "تنبيه بسيط": "amber", إنذار: "rescue", "إنذار نهائي": "rescue" };
+const SEVERITY_TONE = { "ملاحظة شفهية": "neutral", "تنبيه بسيط": "amber", إنذار: "rescue", "إنذار نهائي": "rescue" };
 
 export default function MemberPrintView() {
   const { id } = useParams();
@@ -72,7 +72,7 @@ export default function MemberPrintView() {
 
         <div className="flex items-start gap-5 mb-8">
           {member.photoUrl ? (
-            <img src={withAuthToken(member.photoUrl)} alt="" className="w-28 h-28 rounded-xl object-cover border" />
+            <img src={member.photoUrl} alt="" className="w-28 h-28 rounded-xl object-cover border" />
           ) : (
             <div className="w-28 h-28 rounded-xl bg-gray-100 border flex items-center justify-center text-4xl font-extrabold text-gray-400">
               {member.firstName?.[0]}
@@ -151,6 +151,9 @@ export default function MemberPrintView() {
                     <div className="flex items-center gap-2">
                       <Badge tone={SEVERITY_TONE[w.severity] || "neutral"}>{w.severity}</Badge>
                       <span className="text-xs text-gray-500 num">{formatDate(w.date)}</span>
+                      {w.endDate && (
+                        <span className="text-xs text-gray-500 num">— ساري حتى {formatDate(w.endDate)}</span>
+                      )}
                     </div>
                     <p className="mt-1">{w.reason}</p>
                     {w.notes && <p className="text-gray-500 text-xs mt-0.5">{w.notes}</p>}

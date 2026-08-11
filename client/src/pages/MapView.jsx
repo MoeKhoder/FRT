@@ -359,7 +359,7 @@ export default function MapView() {
         </Card>
 
         {/* Map */}
-        <div className="flex-1 relative rounded-xl overflow-hidden border border-night-700 [body.light_&]:border-mist-200">
+        <div className="flex-1 relative z-0 rounded-xl overflow-hidden border border-night-700 [body.light_&]:border-mist-200">
           {loading && (
             <div className="absolute inset-0 z-[500] flex items-center justify-center bg-night-900/60">
               <Spinner size={32} />
