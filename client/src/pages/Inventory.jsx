@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FiPlus, FiEdit2, FiTrash2, FiMapPin } from "react-icons/fi";
+import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiUserPlus, FiUserX } from "react-icons/fi";
 import api from "../services/api";
 import DataTable from "../components/ui/DataTable";
 import { Button, Input, Select, Textarea, Badge, Card } from "../components/ui/Primitives";
@@ -35,6 +35,7 @@ export default function Inventory() {
   const canWrite = can(user, "inventory", "manage");
 
   const [items, setItems] = useState([]);
+  const [members, setMembers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
@@ -42,10 +43,22 @@ export default function Inventory() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const load = () => api.get("/inventory").then((res) => setItems(res.data));
+  const [assignTarget, setAssignTarget] = useState(null);
+  const [assignMemberId, setAssignMemberId] = useState("");
+  const [assigning, setAssigning] = useState(false);
+
+  const load = () => {
+    api.get("/inventory").then((res) => setItems(res.data));
+    api.get("/members").then((res) => setMembers(res.data)).catch(() => setMembers([]));
+  };
   useEffect(() => {
     load();
   }, []);
+
+  const memberName = (id) => {
+    const m = members.find((x) => x.id === id);
+    return m ? `${m.firstName} ${m.lastName}` : null;
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -89,6 +102,47 @@ export default function Inventory() {
     }
   };
 
+  const openAssign = (item) => {
+    setAssignTarget(item);
+    setAssignMemberId("");
+  };
+
+  const confirmAssign = async () => {
+    if (!assignMemberId) {
+      push("يرجى اختيار عضو", "error");
+      return;
+    }
+    setAssigning(true);
+    try {
+      await api.put(`/inventory/${assignTarget.id}`, {
+        assignedToMemberId: assignMemberId,
+        assignedAt: new Date().toISOString(),
+        status: "مخصص",
+      });
+      push("تم تخصيص المعدة", "success");
+      setAssignTarget(null);
+      load();
+    } catch (err) {
+      push(err.response?.data?.error || "تعذر التخصيص", "error");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const returnItem = async (item) => {
+    try {
+      await api.put(`/inventory/${item.id}`, {
+        assignedToMemberId: null,
+        assignedAt: null,
+        status: "متاح",
+      });
+      push("تم إرجاع المعدة", "success");
+      load();
+    } catch (err) {
+      push(err.response?.data?.error || "تعذر الإرجاع", "error");
+    }
+  };
+
   const columns = [
     { key: "name", label: "الاسم", render: (i) => <span className="font-medium">{i.name}</span> },
     { key: "category", label: "الفئة" },
@@ -96,6 +150,26 @@ export default function Inventory() {
     { key: "availableQuantity", label: "الكمية المتاحة", render: (i) => <span className="num">{i.availableQuantity}</span> },
     { key: "storageLocation", label: "موقع التخزين" },
     { key: "status", label: "الحالة", render: (i) => <Badge tone={STATUS_TONE[i.status] || "neutral"}>{i.status}</Badge> },
+    {
+      key: "assignedToMemberId",
+      label: "المستخدم الحالي",
+      sortable: false,
+      render: (i) => {
+        if (!i.assignedToMemberId) return <span className="text-mist-400 text-sm">—</span>;
+        const name = memberName(i.assignedToMemberId);
+        if (name) {
+          return (
+            <div>
+              <div className="font-medium text-sm">{name}</div>
+              {i.assignedAt && <div className="text-xs text-mist-400 num">{formatDate(i.assignedAt)}</div>}
+            </div>
+          );
+        }
+        // members.length === 0 likely means this user lacks members:view, not that
+        // the member was actually deleted — avoid a misleading label either way.
+        return <span className="text-mist-400 text-sm">{members.length === 0 ? "مخصص" : "عضو محذوف"}</span>;
+      },
+    },
     { key: "nextMaintenance", label: "الصيانة القادمة", render: (i) => <span className="num">{formatDate(i.nextMaintenance)}</span> },
     ...(canWrite
       ? [
@@ -105,6 +179,15 @@ export default function Inventory() {
             sortable: false,
             render: (i) => (
               <div className="flex items-center gap-1">
+                {i.assignedToMemberId ? (
+                  <button onClick={() => returnItem(i)} title="إرجاع" className="p-1.5 rounded-lg hover:bg-safe-500/10 text-safe-400">
+                    <FiUserX size={16} />
+                  </button>
+                ) : (
+                  <button onClick={() => openAssign(i)} title="تخصيص لعضو" className="p-1.5 rounded-lg hover:bg-amber-500/10 text-amber-400">
+                    <FiUserPlus size={16} />
+                  </button>
+                )}
                 <button onClick={() => openEdit(i)} className="p-1.5 rounded-lg hover:bg-night-700 text-mist-400 [body.light_&]:hover:bg-mist-100">
                   <FiEdit2 size={16} />
                 </button>
@@ -175,6 +258,19 @@ export default function Inventory() {
             <Button type="submit" disabled={loading}>{editing ? "حفظ التعديلات" : "إضافة"}</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={!!assignTarget} onClose={() => setAssignTarget(null)} title={`تخصيص "${assignTarget?.name}" لعضو`}>
+        <div className="flex flex-col gap-4">
+          <Select label="العضو" value={assignMemberId} onChange={(e) => setAssignMemberId(e.target.value)}>
+            <option value="">— اختر —</option>
+            {members.map((m) => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAssignTarget(null)}>إلغاء</Button>
+            <Button onClick={confirmAssign} disabled={assigning}>تخصيص</Button>
+          </div>
+        </div>
       </Modal>
 
       <ConfirmDialog

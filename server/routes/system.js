@@ -4,6 +4,7 @@ import path from "path";
 import { readJSON, writeJSON, appendLog, DATA_DIR } from "../utils/store.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { sanitizeInput } from "../utils/crudFactory.js";
+import { hasAccess } from "../utils/permissions.js";
 
 const router = express.Router();
 
@@ -32,12 +33,23 @@ router.put("/settings", requireAuth, requireRole("IT"), (req, res) => {
   res.json({ ok: true });
 });
 
-// Dashboard aggregate stats - available to any authenticated user.
+// Dashboard aggregate stats - available to any authenticated user, but
+// document/warning details are only included if the requester actually has
+// permission to view those features — otherwise a restricted user could see
+// sensitive data through the dashboard that their permissions block them
+// from seeing directly.
 router.get("/stats", requireAuth, (req, res) => {
+  const allUsers = readJSON("users");
+  const fullUser = allUsers.find((u) => u.id === req.user.id) || req.user;
+  const canViewDocuments = hasAccess(fullUser, "documents", "view");
+  const canViewMembers = hasAccess(fullUser, "members", "view");
+
   const members = readJSON("members");
   const missions = readJSON("missions");
   const inventory = readJSON("inventory");
   const ratings = readJSON("ratings");
+  const documents = readJSON("documents");
+  const warnings = readJSON("warnings");
   const announcements = readJSON("announcements").sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
@@ -61,6 +73,34 @@ router.get("/stats", requireAuth, (req, res) => {
         ).toFixed(1)
       : "0.0";
 
+  const now = new Date();
+  const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const memberById = Object.fromEntries(members.map((m) => [m.id, `${m.firstName} ${m.lastName}`]));
+
+  let expiringDocuments = [];
+  let expiringDocumentsCount = 0;
+  if (canViewDocuments) {
+    const allExpiring = documents
+      .filter((d) => d.expirationDate && new Date(d.expirationDate) <= in30Days)
+      .map((d) => ({
+        id: d.id,
+        originalName: d.originalName,
+        documentType: d.documentType,
+        expirationDate: d.expirationDate,
+        expired: new Date(d.expirationDate) < now,
+        memberId: d.memberId,
+        memberName: memberById[d.memberId] || "—",
+      }))
+      .sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate));
+    expiringDocuments = allExpiring.slice(0, 8);
+    expiringDocumentsCount = allExpiring.length;
+  }
+
+  let activeWarningsCount = 0;
+  if (canViewMembers) {
+    activeWarningsCount = warnings.filter((w) => !w.endDate || new Date(w.endDate) >= now).length;
+  }
+
   res.json({
     totalMembers: members.length,
     activeMissions,
@@ -72,6 +112,9 @@ router.get("/stats", requireAuth, (req, res) => {
     averageRating: avgRating,
     recentActivities: logs.slice(0, 10),
     announcements: announcements.slice(0, 5),
+    expiringDocuments,
+    expiringDocumentsCount,
+    activeWarningsCount,
   });
 });
 

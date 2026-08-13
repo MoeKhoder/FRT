@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FiUsers,
   FiFlag,
@@ -8,12 +9,14 @@ import {
   FiTool,
   FiTrendingUp,
   FiStar,
+  FiAlertTriangle,
+  FiFileText,
 } from "react-icons/fi";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import api from "../services/api";
 import StatCard from "../components/ui/StatCard";
 import { Card, Spinner, Badge } from "../components/ui/Primitives";
-import { formatDistanceToNow } from "../utils/dateFormat";
+import { formatDistanceToNow, formatDate } from "../utils/dateFormat";
 
 const COLORS = ["#e4572e", "#2ec4b6", "#f4a300"];
 
@@ -54,6 +57,12 @@ export default function Dashboard() {
         <StatCard icon={FiTool} label="معدات تحت الصيانة" value={stats.maintenanceEquipment} tone="amber" />
         <StatCard icon={FiTrendingUp} label="نسبة نجاح المهام" value={stats.missionSuccessRate} suffix="%" tone="rescue" />
         <StatCard icon={FiStar} label="متوسط تقييم الأعضاء" value={stats.averageRating} suffix="/ 5" tone="neutral" />
+        {stats.activeWarningsCount !== undefined && (
+          <StatCard icon={FiAlertTriangle} label="إنذارات سارية" value={stats.activeWarningsCount} tone={stats.activeWarningsCount > 0 ? "rescue" : "neutral"} />
+        )}
+        {stats.expiringDocumentsCount !== undefined && (
+          <StatCard icon={FiFileText} label="مستندات قاربت على الانتهاء" value={stats.expiringDocumentsCount} tone={stats.expiringDocumentsCount > 0 ? "amber" : "neutral"} />
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -121,6 +130,31 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {stats.expiringDocuments && stats.expiringDocuments.length > 0 && (
+        <Card className="p-5">
+          <h3 className="font-bold mb-3 flex items-center gap-2">
+            <FiFileText size={16} className="text-amber-400" /> مستندات قاربت على الانتهاء أو منتهية
+          </h3>
+          <div className="flex flex-col divide-y divide-night-700 [body.light_&]:divide-mist-200">
+            {stats.expiringDocuments.map((d) => (
+              <Link
+                key={d.id}
+                to={`/members/${d.memberId}`}
+                className="py-2.5 flex items-center justify-between gap-3 hover:bg-night-700/30 -mx-2 px-2 rounded-lg [body.light_&]:hover:bg-mist-100"
+              >
+                <div>
+                  <div className="text-sm font-medium">{d.originalName}</div>
+                  <div className="text-xs text-mist-400">{d.documentType} · {d.memberName}</div>
+                </div>
+                <Badge tone={d.expired ? "rescue" : "amber"}>
+                  <span className="num">{d.expired ? "منتهي" : "ينتهي"} {formatDate(d.expirationDate)}</span>
+                </Badge>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

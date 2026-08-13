@@ -25,6 +25,7 @@ export const NAV_ITEMS = [
   { to: "/hazards", label: "المخاطر", icon: FiAlertTriangle, roles: ["IT", "Administrator", "Assistant"], feature: "hazards" },
   { to: "/facilities", label: "المرافق", icon: FiHome, roles: ["IT", "Administrator", "Assistant"], feature: "facilities" },
   { to: "/announcements", label: "الإعلانات", icon: FiBell, roles: ["IT", "Administrator", "Assistant"], feature: "announcements" },
+  { to: "/warnings-overview", label: "الإنذارات", icon: FiAlertTriangle, roles: ["IT", "Administrator"], feature: "members" },
   { to: "/reports", label: "التقارير", icon: FiBarChart2, roles: ["IT", "Administrator", "Assistant"], feature: "reports" },
   { to: "/users", label: "إدارة المستخدمين", icon: FiUserCheck, roles: ["IT"], feature: null },
   { to: "/audit", label: "سجل التدقيق", icon: FiShield, roles: ["IT"], feature: null },

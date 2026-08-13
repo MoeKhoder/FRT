@@ -55,6 +55,7 @@ export default function AnnouncementPrintView() {
 
         <div className="flex items-center gap-3 flex-wrap mb-3">
           <h1 className="text-2xl font-extrabold">{item.title}</h1>
+          <Badge tone="neutral">{item.category || "إعلان عام"}</Badge>
           <Badge tone={PRIORITY_TONE[item.priority] || "neutral"}>{item.priority}</Badge>
         </div>
         <div className="text-sm text-gray-500 mb-6 num">

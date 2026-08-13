@@ -15,6 +15,7 @@ import Inventory from "./pages/Inventory";
 import Hazards from "./pages/Hazards";
 import Facilities from "./pages/Facilities";
 import Announcements from "./pages/Announcements";
+import WarningsOverview from "./pages/WarningsOverview";
 import Reports from "./pages/Reports";
 import Users from "./pages/Users";
 import AuditLog from "./pages/AuditLog";
@@ -113,6 +114,14 @@ export default function App() {
                   element={
                     <ProtectedRoute feature="announcements">
                       <Announcements />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/warnings-overview"
+                  element={
+                    <ProtectedRoute roles={["IT", "Administrator"]} feature="members">
+                      <WarningsOverview />
                     </ProtectedRoute>
                   }
                 />
