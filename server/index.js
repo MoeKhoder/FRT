@@ -151,12 +151,32 @@ app.use("/uploads", requireAuthAny, express.static(path.join(process.cwd(), "upl
 // Serve the built React frontend from this same server (the recommended,
 // single-service deployment). CLIENT_DIST_PATH defaults to ../client/dist,
 // matching this repo's layout — override it if you deploy differently.
+//
+// Cache policy matters here: Vite gives JS/CSS files unique hashed names
+// per build (index-XXXXXX.js), so those are safe to cache indefinitely —
+// a new build always gets a new filename. index.html is what POINTS to
+// that filename, though, and has no hash — if a browser caches index.html
+// itself, it keeps loading the OLD bundle even after a fresh deploy, and
+// a normal refresh won't fix it (this caused real confusion across several
+// deploys before this was set explicitly). So: hashed assets cache forever,
+// index.html never caches.
 const CLIENT_DIST = process.env.CLIENT_DIST_PATH || path.join(process.cwd(), "..", "client", "dist");
 if (fs.existsSync(CLIENT_DIST)) {
-  app.use(express.static(CLIENT_DIST));
+  app.use(
+    express.static(CLIENT_DIST, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith("index.html")) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        } else {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    })
+  );
   // SPA fallback: any non-API, non-upload route serves index.html so
   // client-side routing (React Router) works on a hard refresh/direct link.
   app.get(/^(?!\/api|\/uploads).*/, (req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.join(CLIENT_DIST, "index.html"));
   });
 } else {
