@@ -40,6 +40,22 @@ if (!settingsRaw || settingsRaw === "[]") {
         orgName: "فريق المستجيب الأول - الجومة",
         theme: "dark",
         sessionTimeoutMinutes: 15,
+        // Dropdown option lists IT can edit from Settings -> "قوائم الخيارات"
+        // without ever touching code. These defaults match what was
+        // previously hardcoded, so nothing changes until IT edits one.
+        lists: {
+          missionTypes: ["إنقاذ جبلي", "إنقاذ مائي", "إسعاف أولي", "إخلاء", "بحث وإنقاذ", "أخرى"],
+          missionPriorities: ["منخفضة", "متوسطة", "عالية", "طارئة"],
+          hazardTypes: ["فيضان", "حريق", "انفجار", "انهيار مبنى", "حالة طبية طارئة", "تسرب كيميائي", "حادث سير", "أضرار زلزال", "أضرار عاصفة", "انزلاق تربة", "شخص مفقود", "حريق غابات", "أخرى"],
+          hazardSeverities: ["منخفضة", "متوسطة", "عالية", "حرجة"],
+          hazardStatuses: ["نشط", "تحت المعالجة", "محلول"],
+          facilityTypes: ["مستشفى", "مركز إطفاء", "مركز شرطة", "ملجأ", "نقطة إخلاء", "مركز قيادة", "مصدر مياه", "منطقة هبوط", "حاجز طريق", "منطقة آمنة", "أخرى"],
+          inventoryCategories: ["حبال وتسلق", "إسعاف أولي", "غوص وإنقاذ مائي", "اتصالات", "إضاءة", "أدوات قطع", "حماية شخصية", "أخرى"],
+          announcementCategories: ["قرار إداري", "إعلان عام", "محضر إجتماع"],
+          warningSeverities: ["ملاحظة شفهية", "تنبيه بسيط", "إنذار", "إنذار نهائي"],
+          documentTypes: ["هوية", "شهادة ميلاد", "نموذج طبي", "رخصة قيادة", "شهادة تدريب", "شهادة إنقاذ", "تأمين", "أخرى"],
+          memberRanks: ["متطوع", "منقذ", "منقذ أول", "قائد فريق", "مدرب"],
+        },
       },
       null,
       2

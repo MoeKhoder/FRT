@@ -1,9 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { FiDownload, FiUpload, FiSave } from "react-icons/fi";
+import { FiDownload, FiUpload, FiSave, FiPlus, FiX, FiList } from "react-icons/fi";
 import api from "../services/api";
-import { Button, Input, Select, Card } from "../components/ui/Primitives";
+import { Button, Input, Select, Card, Badge } from "../components/ui/Primitives";
 import { ConfirmDialog } from "../components/ui/Modal";
 import { useToast } from "../context/ToastContext";
+
+// Matches the seed defaults — shown as the starting point for any list IT
+// hasn't customized yet, whether that's a brand-new install or an existing
+// deployment from before this feature existed.
+const LIST_DEFS = [
+  { key: "missionTypes", label: "أنواع المهام", fallback: ["إنقاذ جبلي", "إنقاذ مائي", "إسعاف أولي", "إخلاء", "بحث وإنقاذ", "أخرى"] },
+  { key: "missionPriorities", label: "أولويات المهام", fallback: ["منخفضة", "متوسطة", "عالية", "طارئة"] },
+  { key: "hazardTypes", label: "أنواع المخاطر", fallback: ["فيضان", "حريق", "انفجار", "انهيار مبنى", "حالة طبية طارئة", "تسرب كيميائي", "حادث سير", "أضرار زلزال", "أضرار عاصفة", "انزلاق تربة", "شخص مفقود", "حريق غابات", "أخرى"] },
+  { key: "hazardSeverities", label: "درجات خطورة المخاطر", fallback: ["منخفضة", "متوسطة", "عالية", "حرجة"] },
+  { key: "hazardStatuses", label: "حالات المخاطر", fallback: ["نشط", "تحت المعالجة", "محلول"] },
+  { key: "facilityTypes", label: "أنواع المرافق", fallback: ["مستشفى", "مركز إطفاء", "مركز شرطة", "ملجأ", "نقطة إخلاء", "مركز قيادة", "مصدر مياه", "منطقة هبوط", "حاجز طريق", "منطقة آمنة", "أخرى"] },
+  { key: "inventoryCategories", label: "فئات المخزون", fallback: ["حبال وتسلق", "إسعاف أولي", "غوص وإنقاذ مائي", "اتصالات", "إضاءة", "أدوات قطع", "حماية شخصية", "أخرى"] },
+  { key: "announcementCategories", label: "أقسام الإعلانات", fallback: ["قرار إداري", "إعلان عام", "محضر إجتماع"] },
+  { key: "warningSeverities", label: "درجات الإنذارات", fallback: ["ملاحظة شفهية", "تنبيه بسيط", "إنذار", "إنذار نهائي"] },
+  { key: "documentTypes", label: "أنواع المستندات", fallback: ["هوية", "شهادة ميلاد", "نموذج طبي", "رخصة قيادة", "شهادة تدريب", "شهادة إنقاذ", "تأمين", "أخرى"] },
+  { key: "memberRanks", label: "رتب الأعضاء", fallback: ["متطوع", "منقذ", "منقذ أول", "قائد فريق", "مدرب"] },
+];
 
 export default function Settings() {
   const { push } = useToast();
@@ -12,6 +29,10 @@ export default function Settings() {
   const [restoreFile, setRestoreFile] = useState(null);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const fileInput = useRef(null);
+
+  const [activeListKey, setActiveListKey] = useState(LIST_DEFS[0].key);
+  const [newValue, setNewValue] = useState("");
+  const [savingList, setSavingList] = useState(false);
 
   useEffect(() => {
     api.get("/system/settings").then((res) => setSettings(res.data));
@@ -26,6 +47,46 @@ export default function Settings() {
       push(err.response?.data?.error || "تعذر الحفظ", "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const activeDef = LIST_DEFS.find((d) => d.key === activeListKey);
+  const activeValues = settings?.lists?.[activeListKey] || activeDef?.fallback || [];
+
+  const addValue = () => {
+    const v = newValue.trim();
+    if (!v) return;
+    if (activeValues.includes(v)) {
+      push("هذه القيمة موجودة مسبقاً", "error");
+      return;
+    }
+    setSettings({
+      ...settings,
+      lists: { ...(settings.lists || {}), [activeListKey]: [...activeValues, v] },
+    });
+    setNewValue("");
+  };
+
+  const removeValue = (v) => {
+    setSettings({
+      ...settings,
+      lists: { ...(settings.lists || {}), [activeListKey]: activeValues.filter((x) => x !== v) },
+    });
+  };
+
+  const saveList = async () => {
+    if (activeValues.length === 0) {
+      push("لا يمكن حفظ قائمة فارغة", "error");
+      return;
+    }
+    setSavingList(true);
+    try {
+      await api.put("/system/settings", settings);
+      push("تم حفظ القائمة", "success");
+    } catch (err) {
+      push(err.response?.data?.error || "تعذر الحفظ", "error");
+    } finally {
+      setSavingList(false);
     }
   };
 
@@ -96,6 +157,52 @@ export default function Settings() {
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>
             <FiSave size={16} /> حفظ
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="p-5 flex flex-col gap-4">
+        <div>
+          <h3 className="font-bold flex items-center gap-2"><FiList size={16} /> قوائم الخيارات</h3>
+          <p className="text-sm text-mist-400 mt-1">
+            تحكّم بخيارات القوائم المنسدلة المستخدمة في النظام (أنواع المهام، المخاطر، المرافق، وغيرها) دون الحاجة لتعديل الكود.
+          </p>
+        </div>
+
+        <Select label="القائمة" value={activeListKey} onChange={(e) => { setActiveListKey(e.target.value); setNewValue(""); }}>
+          {LIST_DEFS.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+        </Select>
+
+        <div className="flex flex-wrap gap-2">
+          {activeValues.map((v) => (
+            <Badge key={v} tone="neutral">
+              <span className="flex items-center gap-1.5">
+                {v}
+                <button type="button" onClick={() => removeValue(v)} className="hover:text-rescue-400">
+                  <FiX size={12} />
+                </button>
+              </span>
+            </Badge>
+          ))}
+          {activeValues.length === 0 && <p className="text-sm text-mist-400">لا توجد قيم — أضف واحدة أدناه</p>}
+        </div>
+
+        <div className="flex gap-2">
+          <Input
+            placeholder="قيمة جديدة"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addValue(); } }}
+            className="flex-1"
+          />
+          <Button type="button" variant="secondary" onClick={addValue}>
+            <FiPlus size={16} /> إضافة
+          </Button>
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={saveList} disabled={savingList}>
+            <FiSave size={16} /> حفظ القائمة
           </Button>
         </div>
       </Card>

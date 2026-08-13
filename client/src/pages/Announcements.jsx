@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiPlus, FiTrash2, FiBell, FiDownload, FiEdit2 } from "react-icons/fi";
 import api from "../services/api";
+import { useOptionList } from "../hooks/useOptionList";
 import { Button, Input, Select, Textarea, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
 import { useAuth } from "../context/AuthContext";
@@ -8,13 +9,14 @@ import { can } from "../utils/permissions";
 import { useToast } from "../context/ToastContext";
 import { formatDateTime } from "../utils/dateFormat";
 
-const CATEGORIES = ["قرار إداري", "إعلان عام", "محضر إجتماع"];
-const EMPTY = { title: "", body: "", priority: "عادية", category: CATEGORIES[1] };
+const DEFAULT_CATEGORIES = ["قرار إداري", "إعلان عام", "محضر إجتماع"];
+const EMPTY = { title: "", body: "", priority: "عادية", category: DEFAULT_CATEGORIES[1] };
 
 export default function Announcements() {
   const { user } = useAuth();
   const { push } = useToast();
   const canWrite = can(user, "announcements", "manage");
+  const CATEGORIES = useOptionList("announcementCategories", DEFAULT_CATEGORIES);
 
   const [items, setItems] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);

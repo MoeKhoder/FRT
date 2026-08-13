@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiHome } from "react-icons/fi";
 import api from "../services/api";
+import { useOptionList } from "../hooks/useOptionList";
 import DataTable from "../components/ui/DataTable";
 import { Button, Input, Select, Textarea, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
@@ -9,17 +10,18 @@ import { useAuth } from "../context/AuthContext";
 import { can } from "../utils/permissions";
 import { useToast } from "../context/ToastContext";
 
-const TYPES = [
+const DEFAULT_TYPES = [
   "مستشفى", "مركز إطفاء", "مركز شرطة", "ملجأ", "نقطة إخلاء",
   "مركز قيادة", "مصدر مياه", "منطقة هبوط", "حاجز طريق", "منطقة آمنة", "أخرى",
 ];
 
-const EMPTY = { name: "", type: TYPES[0], lat: null, lng: null, notes: "" };
+const EMPTY = { name: "", type: DEFAULT_TYPES[0], lat: null, lng: null, notes: "" };
 
 export default function Facilities() {
   const { user } = useAuth();
   const { push } = useToast();
   const canWrite = can(user, "facilities", "manage");
+  const TYPES = useOptionList("facilityTypes", DEFAULT_TYPES);
 
   const [facilities, setFacilities] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);

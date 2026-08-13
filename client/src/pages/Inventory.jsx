@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiUserPlus, FiUserX } from "react-icons/fi";
 import api from "../services/api";
+import { useOptionList } from "../hooks/useOptionList";
 import DataTable from "../components/ui/DataTable";
 import { Button, Input, Select, Textarea, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
@@ -10,12 +11,12 @@ import { can } from "../utils/permissions";
 import { useToast } from "../context/ToastContext";
 import { formatDate } from "../utils/dateFormat";
 
-const CATEGORIES = ["حبال وتسلق", "إسعاف أولي", "غوص وإنقاذ مائي", "اتصالات", "إضاءة", "أدوات قطع", "حماية شخصية", "أخرى"];
+const DEFAULT_CATEGORIES = ["حبال وتسلق", "إسعاف أولي", "غوص وإنقاذ مائي", "اتصالات", "إضاءة", "أدوات قطع", "حماية شخصية", "أخرى"];
 const STATUS_TONE = { متاح: "safe", مخصص: "amber", صيانة: "amber", تالف: "rescue", مفقود: "rescue" };
 
 const EMPTY = {
   name: "",
-  category: CATEGORIES[0],
+  category: DEFAULT_CATEGORIES[0],
   serialNumber: "",
   purchaseDate: "",
   condition: "جيد",
@@ -33,6 +34,7 @@ export default function Inventory() {
   const { user } = useAuth();
   const { push } = useToast();
   const canWrite = can(user, "inventory", "manage");
+  const CATEGORIES = useOptionList("inventoryCategories", DEFAULT_CATEGORIES);
 
   const [items, setItems] = useState([]);
   const [members, setMembers] = useState([]);

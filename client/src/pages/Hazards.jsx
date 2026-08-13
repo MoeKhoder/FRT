@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiAlertTriangle } from "react-icons/fi";
 import api from "../services/api";
+import { useOptionList } from "../hooks/useOptionList";
 import DataTable from "../components/ui/DataTable";
 import { Button, Input, Select, Textarea, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
@@ -10,17 +11,17 @@ import { can } from "../utils/permissions";
 import { useToast } from "../context/ToastContext";
 import { formatDate } from "../utils/dateFormat";
 
-const TYPES = [
+const DEFAULT_TYPES = [
   "فيضان", "حريق", "انفجار", "انهيار مبنى", "حالة طبية طارئة", "تسرب كيميائي",
   "حادث سير", "أضرار زلزال", "أضرار عاصفة", "انزلاق تربة", "شخص مفقود", "حريق غابات", "أخرى",
 ];
-const SEVERITIES = ["منخفضة", "متوسطة", "عالية", "حرجة"];
-const STATUSES = ["نشط", "تحت المعالجة", "محلول"];
+const DEFAULT_SEVERITIES = ["منخفضة", "متوسطة", "عالية", "حرجة"];
+const DEFAULT_STATUSES = ["نشط", "تحت المعالجة", "محلول"];
 const SEVERITY_TONE = { منخفضة: "safe", متوسطة: "amber", عالية: "rescue", حرجة: "rescue" };
 const STATUS_TONE = { نشط: "rescue", "تحت المعالجة": "amber", محلول: "safe" };
 
 const EMPTY = {
-  type: TYPES[0],
+  type: DEFAULT_TYPES[0],
   severity: "متوسطة",
   status: "نشط",
   lat: null,
@@ -35,6 +36,9 @@ export default function Hazards() {
   const { user } = useAuth();
   const { push } = useToast();
   const canWrite = can(user, "hazards", "manage");
+  const TYPES = useOptionList("hazardTypes", DEFAULT_TYPES);
+  const SEVERITIES = useOptionList("hazardSeverities", DEFAULT_SEVERITIES);
+  const STATUSES = useOptionList("hazardStatuses", DEFAULT_STATUSES);
 
   const [hazards, setHazards] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);

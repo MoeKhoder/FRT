@@ -111,11 +111,14 @@ router.delete("/:id", writeGuard, (req, res) => {
   res.json({ ok: true });
 });
 
-// Matches approved respondents to existing members (by phone, then name) and adds them
-// to the mission's member list. Unmatched respondents are returned so IT/Administrator
-// can add them as new members manually.
+// Matches approved respondents to existing members (by phone, then name). By
+// default adds everyone matched; if `randomCount` is given, randomly selects
+// that many from the matched pool instead (useful when more people approve
+// than a mission actually needs — a fair way to pick who goes). Unmatched
+// respondents are returned either way so IT/Administrator can add them as
+// new members manually.
 router.post("/auto-generate-team", writeGuard, (req, res) => {
-  const { missionId } = req.body || {};
+  const { missionId, randomCount } = req.body || {};
   if (!missionId) return res.status(400).json({ error: "missionId مطلوب" });
 
   const missions = readJSON("missions");
@@ -131,19 +134,37 @@ router.post("/auto-generate-team", writeGuard, (req, res) => {
     return res.status(400).json({ error: "لا توجد ردود موافقة على المشاركة في هذا الاستبيان" });
   }
 
-  const matchedIds = new Set(missions[missionIdx].members || []);
+  const matchedMembers = [];
   const unmatched = [];
 
   for (const r of approvedResponses) {
     const member = findMatchingMember(r, members);
     if (member) {
-      matchedIds.add(member.id);
+      if (!matchedMembers.some((m) => m.id === member.id)) matchedMembers.push(member);
     } else {
       unmatched.push({ responderName: r.responderName, phone: r.phone });
     }
   }
 
-  missions[missionIdx].members = Array.from(matchedIds);
+  let selectedMembers = matchedMembers;
+  let notSelected = [];
+  const count = Number(randomCount);
+
+  if (Number.isFinite(count) && count > 0 && count < matchedMembers.length) {
+    // Fisher-Yates shuffle, then take the first `count` — fair random pick.
+    const shuffled = [...matchedMembers];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    selectedMembers = shuffled.slice(0, count);
+    notSelected = shuffled.slice(count);
+  }
+
+  const finalIds = new Set(missions[missionIdx].members || []);
+  selectedMembers.forEach((m) => finalIds.add(m.id));
+
+  missions[missionIdx].members = Array.from(finalIds);
   missions[missionIdx].updatedAt = new Date().toISOString();
   missions[missionIdx].updatedBy = req.user.username;
   writeJSON("missions", missions);
@@ -151,17 +172,20 @@ router.post("/auto-generate-team", writeGuard, (req, res) => {
   appendLog({
     username: req.user.username,
     role: req.user.role,
-    action: "توليد فريق تلقائي من الاستبيان",
+    action: count ? "اختيار عشوائي للفريق من الاستبيان" : "توليد فريق تلقائي من الاستبيان",
     module: "المهام",
     recordId: missionId,
     oldValue: null,
-    newValue: { matched: matchedIds.size, unmatched: unmatched.length },
+    newValue: { matched: matchedMembers.length, selected: selectedMembers.length, unmatched: unmatched.length },
     result: "نجاح",
     ip: req.ip,
   });
 
   res.json({
-    matchedCount: matchedIds.size,
+    matchedCount: finalIds.size,
+    poolSize: matchedMembers.length,
+    selectedCount: selectedMembers.length,
+    notSelected: notSelected.map((m) => `${m.firstName} ${m.lastName}`),
     unmatched,
     mission: missions[missionIdx],
   });

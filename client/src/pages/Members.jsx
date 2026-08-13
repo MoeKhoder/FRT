@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiEdit2, FiTrash2, FiEye, FiMapPin } from "react-icons/fi";
 import api from "../services/api";
+import { useOptionList } from "../hooks/useOptionList";
 import DataTable from "../components/ui/DataTable";
 import { Button, Input, Select, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
@@ -11,7 +12,7 @@ import { can } from "../utils/permissions";
 import { useToast } from "../context/ToastContext";
 
 const STATUS_TONE = { نشط: "safe", "غير نشط": "neutral", موقوف: "rescue" };
-const RANKS = ["متطوع", "منقذ", "منقذ أول", "قائد فريق", "مدرب"];
+const DEFAULT_RANKS = ["متطوع", "منقذ", "منقذ أول", "قائد فريق", "مدرب"];
 
 const EMPTY = {
   firstName: "",
@@ -35,6 +36,7 @@ export default function Members() {
   const { push } = useToast();
   const navigate = useNavigate();
   const canWrite = can(user, "members", "manage");
+  const RANKS = useOptionList("memberRanks", DEFAULT_RANKS);
 
   const [members, setMembers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);

@@ -5,6 +5,7 @@ import {
   FiFile, FiUpload, FiTrash2, FiAlertTriangle, FiPlus, FiDownload, FiFileText, FiEdit2,
 } from "react-icons/fi";
 import api, { withAuthToken } from "../services/api";
+import { useOptionList } from "../hooks/useOptionList";
 import { Card, Badge, Spinner, Button, Input, Select, Textarea } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
 import { useAuth } from "../context/AuthContext";
@@ -12,8 +13,8 @@ import { useToast } from "../context/ToastContext";
 import { can } from "../utils/permissions";
 import { formatDate, formatDateTime } from "../utils/dateFormat";
 
-const DOC_TYPES = ["هوية", "شهادة ميلاد", "نموذج طبي", "رخصة قيادة", "شهادة تدريب", "شهادة إنقاذ", "تأمين", "أخرى"];
-const WARNING_SEVERITIES = ["ملاحظة شفهية", "تنبيه بسيط", "إنذار", "إنذار نهائي"];
+const DEFAULT_DOC_TYPES = ["هوية", "شهادة ميلاد", "نموذج طبي", "رخصة قيادة", "شهادة تدريب", "شهادة إنقاذ", "تأمين", "أخرى"];
+const DEFAULT_WARNING_SEVERITIES = ["ملاحظة شفهية", "تنبيه بسيط", "إنذار", "إنذار نهائي"];
 const SEVERITY_TONE = { "ملاحظة شفهية": "neutral", "تنبيه بسيط": "amber", إنذار: "rescue", "إنذار نهائي": "rescue" };
 
 export default function MemberProfile() {
@@ -23,6 +24,8 @@ export default function MemberProfile() {
   const { push } = useToast();
   const canWrite = can(user, "members", "manage");
   const canDocs = can(user, "documents", "manage");
+  const DOC_TYPES = useOptionList("documentTypes", DEFAULT_DOC_TYPES);
+  const WARNING_SEVERITIES = useOptionList("warningSeverities", DEFAULT_WARNING_SEVERITIES);
 
   const [member, setMember] = useState(null);
   const [missions, setMissions] = useState([]);

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { FiUpload, FiCheckCircle, FiXCircle, FiUsers, FiTrash2, FiFileText } from "react-icons/fi";
+import { FiUpload, FiCheckCircle, FiXCircle, FiUsers, FiTrash2, FiFileText, FiEye, FiShuffle } from "react-icons/fi";
 import api from "../services/api";
-import { Button, Select, Badge, Spinner, Card } from "./ui/Primitives";
+import { Button, Select, Badge, Spinner, Card, Input } from "./ui/Primitives";
 import { Modal, ConfirmDialog } from "./ui/Modal";
 import { useToast } from "../context/ToastContext";
 import { formatDateTime } from "../utils/dateFormat";
@@ -16,6 +16,7 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
   const [tab, setTab] = useState("responses");
   const [responses, setResponses] = useState([]);
   const [loadingResponses, setLoadingResponses] = useState(true);
+  const [detailTarget, setDetailTarget] = useState(null);
 
   // upload/mapping state
   const [fileName, setFileName] = useState("");
@@ -32,6 +33,7 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
   const [generating, setGenerating] = useState(false);
   const [genResult, setGenResult] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [randomCount, setRandomCount] = useState("");
 
   const loadResponses = () => {
     if (!mission) return;
@@ -46,6 +48,7 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
     if (!open || !mission) return;
     resetUploadState();
     setGenResult(null);
+    setRandomCount("");
     loadResponses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mission]);
@@ -97,6 +100,9 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
     setApprovedValues((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
   };
 
+  // Every column from the uploaded sheet is preserved per-response in
+  // rawAnswers — nothing from the original Google Form export is dropped,
+  // even though only a few fields are used for matching/approval.
   const preview = useMemo(() => {
     if (nameCol === NONE || rawRows.length === 0) return [];
     return rawRows.map((row) => ({
@@ -161,9 +167,18 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
     setGenerating(true);
     setGenResult(null);
     try {
-      const res = await api.post("/surveys/auto-generate-team", { missionId: mission.id });
+      const body = { missionId: mission.id };
+      const n = Number(randomCount);
+      if (randomCount.trim() && Number.isFinite(n) && n > 0) body.randomCount = n;
+
+      const res = await api.post("/surveys/auto-generate-team", body);
       setGenResult(res.data);
-      push(`تم تحديد ${res.data.matchedCount} عضو للمهمة`, "success");
+      push(
+        body.randomCount
+          ? `تم اختيار ${res.data.selectedCount} عضو عشوائياً من أصل ${res.data.poolSize}`
+          : `تم تحديد ${res.data.matchedCount} عضو للمهمة`,
+        "success"
+      );
       onTeamGenerated?.();
     } catch (err) {
       push(err.response?.data?.error || "تعذر توليد الفريق", "error");
@@ -173,6 +188,8 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
   };
 
   if (!mission) return null;
+
+  const approvedTotal = responses.filter((r) => r.approved).length;
 
   return (
     <Modal open={open} onClose={onClose} title={`استبيان المهمة: ${mission.missionName}`} wide>
@@ -210,11 +227,15 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
             <>
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2 text-mist-300">
-                  <FiFileText size={16} /> {fileName} · {rawRows.length} صف
+                  <FiFileText size={16} /> {fileName} · {rawRows.length} صف · {headers.length} حقل
                 </span>
                 <button onClick={resetUploadState} className="text-rescue-400 text-xs hover:underline">
                   اختيار ملف آخر
                 </button>
+              </div>
+
+              <div className="rounded-lg bg-night-700/40 px-4 py-2.5 text-xs text-mist-400 [body.light_&]:bg-mist-100">
+                سيتم حفظ <span className="font-bold">جميع حقول الاستمارة</span> لكل رد ({headers.length} حقلاً)، وليس فقط الحقول المحددة أدناه — يمكنكم مراجعة كل التفاصيل لاحقاً من تبويب "الردود".
               </div>
 
               <div className="grid sm:grid-cols-3 gap-3">
@@ -290,20 +311,46 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
 
       {tab === "responses" && (
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <p className="text-sm text-mist-400">
-              الأعضاء الموافقون على المشاركة يمكن تحويلهم تلقائياً إلى فريق المهمة
+              {approvedTotal} من أصل {responses.length} وافقوا على المشاركة
             </p>
-            <Button onClick={autoGenerate} disabled={generating || responses.filter((r) => r.approved).length === 0}>
-              <FiUsers size={16} /> {generating ? "جارٍ التوليد..." : "توليد الفريق تلقائياً"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                placeholder="عدد الأعضاء (اختياري)"
+                value={randomCount}
+                onChange={(e) => setRandomCount(e.target.value)}
+                className="w-40"
+                title="اتركه فارغاً لإضافة كل الموافقين، أو أدخل رقماً لاختيار هذا العدد عشوائياً"
+              />
+              <Button onClick={autoGenerate} disabled={generating || approvedTotal === 0}>
+                {randomCount.trim() ? <FiShuffle size={16} /> : <FiUsers size={16} />}
+                {generating ? "جارٍ التوليد..." : randomCount.trim() ? "اختيار عشوائي" : "توليد الفريق تلقائياً"}
+              </Button>
+            </div>
           </div>
+          <p className="text-xs text-mist-400 -mt-2">
+            اتركوا الحقل فارغاً لإضافة جميع الموافقين، أو أدخلوا عدداً (مثلاً 5) لاختيار هذا العدد عشوائياً وبشكل عادل من بين الموافقين المتطابقين مع أعضاء مسجّلين.
+          </p>
 
           {genResult && (
             <Card className="p-4">
               <div className="flex items-center gap-2 text-safe-400 font-semibold text-sm mb-2">
-                <FiCheckCircle size={16} /> تم تحديث فريق المهمة — {genResult.matchedCount} عضو
+                <FiCheckCircle size={16} />
+                {genResult.selectedCount !== genResult.poolSize
+                  ? `تم اختيار ${genResult.selectedCount} عشوائياً من أصل ${genResult.poolSize} عضو متطابق — الإجمالي الآن ${genResult.matchedCount}`
+                  : `تم تحديث فريق المهمة — ${genResult.matchedCount} عضو`}
               </div>
+              {genResult.notSelected?.length > 0 && (
+                <div className="text-sm text-mist-400 mb-2">
+                  <div className="font-medium mb-1">لم يقعوا ضمن الاختيار العشوائي هذه المرة:</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {genResult.notSelected.map((n, i) => <Badge key={i} tone="neutral">{n}</Badge>)}
+                  </div>
+                </div>
+              )}
               {genResult.unmatched.length > 0 && (
                 <div className="text-sm text-amber-400">
                   <div className="flex items-center gap-1.5 font-medium mb-1">
@@ -337,6 +384,9 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
                     ) : (
                       <Badge tone="neutral">غير موافق</Badge>
                     )}
+                    <button onClick={() => setDetailTarget(r)} title="عرض كل تفاصيل الرد" className="p-1 rounded hover:bg-night-700 text-mist-400 [body.light_&]:hover:bg-mist-100">
+                      <FiEye size={14} />
+                    </button>
                     <button onClick={() => setDeleteTarget(r)} className="p-1 rounded hover:bg-rescue-500/10 text-rescue-400">
                       <FiTrash2 size={14} />
                     </button>
@@ -352,6 +402,21 @@ export default function SurveyModal({ open, onClose, mission, onTeamGenerated })
           )}
         </div>
       )}
+
+      <Modal open={!!detailTarget} onClose={() => setDetailTarget(null)} title={`كل بيانات رد: ${detailTarget?.responderName || ""}`}>
+        <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
+          {detailTarget?.rawAnswers && Object.keys(detailTarget.rawAnswers).length > 0 ? (
+            Object.entries(detailTarget.rawAnswers).map(([question, answer]) => (
+              <div key={question} className="border-b border-night-700 pb-2 last:border-0 [body.light_&]:border-mist-200">
+                <div className="text-xs text-mist-400">{question}</div>
+                <div className="text-sm">{String(answer) || "—"}</div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-mist-400">لا توجد بيانات إضافية محفوظة لهذا الرد</p>
+          )}
+        </div>
+      </Modal>
 
       <ConfirmDialog
         open={!!deleteTarget}

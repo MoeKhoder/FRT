@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiStar, FiClipboard } from "react-icons/fi";
 import api from "../services/api";
+import { useOptionList } from "../hooks/useOptionList";
 import DataTable from "../components/ui/DataTable";
 import { Button, Input, Select, Textarea, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
@@ -13,12 +14,12 @@ import { can } from "../utils/permissions";
 import { formatDate } from "../utils/dateFormat";
 
 const STATUS_TONE = { "قيد الانتظار": "amber", "قيد التنفيذ": "rescue", مكتملة: "safe", ملغاة: "neutral" };
-const TYPES = ["إنقاذ جبلي", "إنقاذ مائي", "إسعاف أولي", "إخلاء", "بحث وإنقاذ", "أخرى"];
-const PRIORITIES = ["منخفضة", "متوسطة", "عالية", "طارئة"];
+const DEFAULT_TYPES = ["إنقاذ جبلي", "إنقاذ مائي", "إسعاف أولي", "إخلاء", "بحث وإنقاذ", "أخرى"];
+const DEFAULT_PRIORITIES = ["منخفضة", "متوسطة", "عالية", "طارئة"];
 
 const EMPTY = {
   missionName: "",
-  missionType: TYPES[0],
+  missionType: DEFAULT_TYPES[0],
   priority: "متوسطة",
   status: "قيد الانتظار",
   location: "",
@@ -38,6 +39,8 @@ export default function Missions() {
   const canWrite = can(user, "missions", "manage");
   const canRate = can(user, "ratings", "manage");
   const canSurvey = can(user, "surveys", "manage");
+  const TYPES = useOptionList("missionTypes", DEFAULT_TYPES);
+  const PRIORITIES = useOptionList("missionPriorities", DEFAULT_PRIORITIES);
 
   const [missions, setMissions] = useState([]);
   const [members, setMembers] = useState([]);
