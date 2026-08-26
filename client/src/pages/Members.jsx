@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiEdit2, FiTrash2, FiEye, FiMapPin } from "react-icons/fi";
 import api from "../services/api";
-import { useOptionList } from "../hooks/useOptionList";
 import DataTable from "../components/ui/DataTable";
 import { Button, Input, Select, Badge, Card } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
@@ -10,9 +9,10 @@ import LocationPicker from "../components/LocationPicker";
 import { useAuth } from "../context/AuthContext";
 import { can } from "../utils/permissions";
 import { useToast } from "../context/ToastContext";
+import { useOptionList } from "../hooks/useOptionList";
 
-const STATUS_TONE = { نشط: "safe", "غير نشط": "neutral", موقوف: "rescue" };
 const DEFAULT_RANKS = ["متطوع", "منقذ", "منقذ أول", "قائد فريق", "مدرب"];
+const STATUS_TONE = { نشط: "safe", "غير نشط": "neutral", موقوف: "rescue" };
 
 const EMPTY = {
   firstName: "",
@@ -46,6 +46,9 @@ export default function Members() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Cross-reference missions to compute a real per-member mission count —
+  // this used to always read 0 because the field was never actually
+  // populated anywhere; fixed by computing it client-side from live data.
   const load = () =>
     Promise.allSettled([api.get("/members"), api.get("/missions")]).then(([mRes, missionsRes]) => {
       const memberRows = mRes.status === "fulfilled" ? mRes.value.data : [];
@@ -117,10 +120,11 @@ export default function Members() {
         </button>
       ),
     },
+    { key: "frtNumber", label: "الرقم", render: (m) => <span className="num text-mist-400">{m.frtNumber || "—"}</span> },
     { key: "rank", label: "الرتبة" },
     { key: "phone", label: "الهاتف", render: (m) => <span className="num">{m.phone}</span> },
     { key: "status", label: "الحالة", render: (m) => <Badge tone={STATUS_TONE[m.status] || "neutral"}>{m.status}</Badge> },
-    { key: "missionCount", label: "عدد المهام", render: (m) => m.missionCount ?? 0, sortable: false },
+    { key: "missionCount", label: "عدد المهام", render: (m) => <span className="num">{m.missionCount ?? 0}</span>, sortable: false },
     {
       key: "actions",
       label: "",
@@ -163,13 +167,18 @@ export default function Members() {
         <DataTable
           columns={columns}
           data={members}
-          searchKeys={["firstName", "lastName", "phone", "nationalId"]}
+          searchKeys={["firstName", "lastName", "phone", "nationalId", "frtNumber"]}
           emptyLabel="لا يوجد أعضاء بعد"
         />
       </Card>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "تعديل بيانات العضو" : "إضافة عضو جديد"} wide>
         <form onSubmit={submit} className="grid sm:grid-cols-2 gap-4">
+          {editing?.frtNumber && (
+            <div className="sm:col-span-2 text-sm text-mist-400">
+              رقم العضوية: <span className="num font-bold text-mist-100">{editing.frtNumber}</span> (يُخصَّص تلقائياً، غير قابل للتعديل)
+            </div>
+          )}
           <Input label="الاسم الأول" required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
           <Input label="اسم العائلة" required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
           <Input label="الرقم الوطني" value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} />

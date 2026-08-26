@@ -36,8 +36,13 @@ export function sanitizeInput(body) {
  *  - moduleLabel: Arabic label used in audit logs
  *  - feature: key from FEATURES this module is governed by
  *  - uniqueFields: array of field names that must be unique (case-insensitive)
+ *  - beforeCreate: optional (body, existingItems) => body — lets a specific
+ *    module inject server-computed fields (e.g. an auto-numbered ID) before
+ *    a new record is saved, without baking that logic into every module.
+ *  - protectedFields: field names (e.g. produced by beforeCreate) that must
+ *    never change via a later edit, same reasoning as id/createdAt/createdBy.
  */
-export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [] }) {
+export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [], beforeCreate = null, protectedFields = [] }) {
   const router = express.Router();
 
   const readGuard = [requireAuth, requireFeature(feature, "view")];
@@ -56,9 +61,14 @@ export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [] 
   router.post("/", writeGuard, (req, res) => {
     const clean = sanitizeInput(req.body);
     if (!clean.ok) return res.status(400).json({ error: clean.error });
-    const body = clean.value;
+    let body = clean.value;
 
     const items = readJSON(file);
+
+    if (typeof beforeCreate === "function") {
+      body = beforeCreate(body, items) || body;
+    }
+
     for (const f of uniqueFields) {
       const val = body[f];
       if (val && items.some((x) => String(x[f]).toLowerCase() === String(val).toLowerCase())) {
@@ -113,14 +123,18 @@ export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [] 
     const updated = {
       ...oldValue,
       ...body,
-      // Same protection as above: id/creation metadata is never
-      // client-controlled, even on edit.
+      // Same protection as above: id/creation metadata (including any
+      // beforeCreate-generated field like frtNumber) is never client-
+      // editable via a later PUT, even accidentally.
       id: oldValue.id,
       createdAt: oldValue.createdAt,
       createdBy: oldValue.createdBy,
       updatedAt: new Date().toISOString(),
       updatedBy: req.user.username,
     };
+    for (const f of protectedFields) {
+      updated[f] = oldValue[f];
+    }
     items[idx] = updated;
     writeJSON(file, items);
     appendLog({

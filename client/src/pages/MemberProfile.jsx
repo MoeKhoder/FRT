@@ -2,15 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   FiArrowRight, FiPhone, FiDroplet, FiMapPin, FiCalendar, FiStar, FiCamera,
-  FiFile, FiUpload, FiTrash2, FiAlertTriangle, FiPlus, FiDownload, FiFileText, FiEdit2,
+  FiFile, FiUpload, FiTrash2, FiAlertTriangle, FiPlus, FiDownload, FiFileText,
+  FiEdit2, FiCreditCard,
 } from "react-icons/fi";
 import api, { withAuthToken } from "../services/api";
-import { useOptionList } from "../hooks/useOptionList";
 import { Card, Badge, Spinner, Button, Input, Select, Textarea } from "../components/ui/Primitives";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { can } from "../utils/permissions";
+import { useOptionList } from "../hooks/useOptionList";
 import { formatDate, formatDateTime } from "../utils/dateFormat";
 
 const DEFAULT_DOC_TYPES = ["هوية", "شهادة ميلاد", "نموذج طبي", "رخصة قيادة", "شهادة تدريب", "شهادة إنقاذ", "تأمين", "أخرى"];
@@ -203,9 +204,14 @@ export default function MemberProfile() {
         <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-mist-400 hover:text-mist-100 w-fit">
           <FiArrowRight size={16} /> رجوع
         </button>
-        <Button variant="secondary" onClick={() => window.open(`/members/${id}/print`, "_blank")}>
-          <FiDownload size={16} /> تصدير PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => window.open(`/members/${id}/id-card`, "_blank")}>
+            <FiCreditCard size={16} /> طباعة البطاقة
+          </Button>
+          <Button variant="secondary" onClick={() => window.open(`/members/${id}/print`, "_blank")}>
+            <FiDownload size={16} /> تصدير PDF
+          </Button>
+        </div>
       </div>
 
       <Card className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
@@ -233,6 +239,7 @@ export default function MemberProfile() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-extrabold">{member.firstName} {member.lastName}</h1>
             <Badge tone={member.status === "نشط" ? "safe" : "neutral"}>{member.status}</Badge>
+            {member.frtNumber && <Badge tone="neutral"><span className="num">{member.frtNumber}</span></Badge>}
           </div>
           <p className="text-mist-400 mt-1">{member.rank} · {member.position || "—"}</p>
           <div className="flex flex-wrap gap-4 mt-3 text-sm text-mist-300">
