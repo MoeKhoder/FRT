@@ -206,7 +206,10 @@ export default function MemberProfile() {
         </button>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => window.open(`/members/${id}/id-card`, "_blank")}>
-            <FiCreditCard size={16} /> طباعة البطاقة
+            <FiCreditCard size={16} /> البطاقة (أمامي)
+          </Button>
+          <Button variant="secondary" onClick={() => window.open(`/members/${id}/id-card-back`, "_blank")}>
+            <FiCreditCard size={16} /> البطاقة (خلفي)
           </Button>
           <Button variant="secondary" onClick={() => window.open(`/members/${id}/print`, "_blank")}>
             <FiDownload size={16} /> تصدير PDF

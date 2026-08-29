@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 
@@ -11,7 +12,11 @@ import Members from "./pages/Members";
 import MemberProfile from "./pages/MemberProfile";
 import MemberPrintView from "./pages/MemberPrintView";
 import IDCardPrintView from "./pages/IDCardPrintView";
+import IDCardBackPrintView from "./pages/IDCardBackPrintView";
 import Missions from "./pages/Missions";
+import Payments from "./pages/finances/Payments";
+import Donations from "./pages/finances/Donations";
+import FinanceStatus from "./pages/finances/FinanceStatus";
 import Inventory from "./pages/Inventory";
 import Hazards from "./pages/Hazards";
 import Facilities from "./pages/Facilities";
@@ -47,6 +52,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute feature="members">
             <IDCardPrintView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/:id/id-card-back"
+        element={
+          <ProtectedRoute feature="members">
+            <IDCardBackPrintView />
           </ProtectedRoute>
         }
       />
@@ -96,6 +109,30 @@ function AppRoutes() {
           element={
             <ProtectedRoute feature="missions">
               <Missions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/finances/payments"
+          element={
+            <ProtectedRoute feature="finances">
+              <Payments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/finances/donations"
+          element={
+            <ProtectedRoute feature="finances">
+              <Donations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/finances/status"
+          element={
+            <ProtectedRoute feature="finances">
+              <FinanceStatus />
             </ProtectedRoute>
           }
         />
@@ -183,9 +220,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ToastProvider>
-          <AppRoutes />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <AppRoutes />
+          </ToastProvider>
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   );

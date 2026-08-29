@@ -17,10 +17,12 @@ import api from "../services/api";
 import StatCard from "../components/ui/StatCard";
 import { Card, Spinner, Badge } from "../components/ui/Primitives";
 import { formatDistanceToNow, formatDate } from "../utils/dateFormat";
+import { useAuth } from "../context/AuthContext";
 
 const COLORS = ["#e4572e", "#2ec4b6", "#f4a300"];
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -90,27 +92,29 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <Card className="p-5 lg:col-span-1">
-          <h3 className="font-bold mb-3">آخر النشاطات</h3>
-          <div className="flex flex-col gap-3 max-h-64 overflow-y-auto">
-            {stats.recentActivities.length === 0 && (
-              <p className="text-sm text-mist-400">لا توجد نشاطات مسجلة بعد</p>
-            )}
-            {stats.recentActivities.map((a) => (
-              <div key={a.id} className="flex items-start justify-between gap-2 text-sm border-b border-night-700 pb-2 last:border-0 [body.light_&]:border-mist-200">
-                <div>
-                  <div className="font-medium">{a.action}</div>
-                  <div className="text-xs text-mist-400">
-                    {a.username} · {a.module}
+        {user?.role === "IT" && (
+          <Card className="p-5 lg:col-span-1">
+            <h3 className="font-bold mb-3">آخر النشاطات</h3>
+            <div className="flex flex-col gap-3 max-h-64 overflow-y-auto">
+              {stats.recentActivities.length === 0 && (
+                <p className="text-sm text-mist-400">لا توجد نشاطات مسجلة بعد</p>
+              )}
+              {stats.recentActivities.map((a) => (
+                <div key={a.id} className="flex items-start justify-between gap-2 text-sm border-b border-night-700 pb-2 last:border-0 [body.light_&]:border-mist-200">
+                  <div>
+                    <div className="font-medium">{a.action}</div>
+                    <div className="text-xs text-mist-400">
+                      {a.username} · {a.module}
+                    </div>
                   </div>
+                  <span className="text-xs text-mist-400 whitespace-nowrap num">
+                    {formatDistanceToNow(a.timestamp)}
+                  </span>
                 </div>
-                <span className="text-xs text-mist-400 whitespace-nowrap num">
-                  {formatDistanceToNow(a.timestamp)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card className="p-5 lg:col-span-1">
           <h3 className="font-bold mb-3">الإعلانات</h3>
