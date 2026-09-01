@@ -52,7 +52,7 @@ export default function Donations() {
     try {
       const body = { ...form, amount };
       if (editing) {
-        await api.put(`/donations/${editing.id}`, body);
+        await api.put(`/donations/${editing.id}`, { ...body, _expectedVersion: editing._version });
         push("تم تحديث بيانات التبرع", "success");
       } else {
         await api.post("/donations", body);

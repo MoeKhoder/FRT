@@ -39,10 +39,15 @@ export function sanitizeInput(body) {
  *  - beforeCreate: optional (body, existingItems) => body — lets a specific
  *    module inject server-computed fields (e.g. an auto-numbered ID) before
  *    a new record is saved, without baking that logic into every module.
+ *  - afterCreate: optional (newItem, req) => void — fire-and-forget side
+ *    effect after a record is successfully created and the response is
+ *    already being sent (e.g. push notification fan-out). Errors inside it
+ *    are caught and logged, never allowed to affect the response the client
+ *    already received.
  *  - protectedFields: field names (e.g. produced by beforeCreate) that must
  *    never change via a later edit, same reasoning as id/createdAt/createdBy.
  */
-export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [], beforeCreate = null, protectedFields = [] }) {
+export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [], beforeCreate = null, afterCreate = null, protectedFields = [] }) {
   const router = express.Router();
 
   const readGuard = [requireAuth, requireFeature(feature, "view")];
@@ -81,6 +86,7 @@ export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [],
       // createdBy can never override them — id colliding with an existing
       // record would let one request shadow/corrupt another's data.
       id: cryptoRandomId(),
+      _version: 1,
       createdAt: new Date().toISOString(),
       createdBy: req.user.username,
     };
@@ -98,6 +104,14 @@ export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [],
       ip: req.ip,
     });
     res.status(201).json(newItem);
+
+    if (typeof afterCreate === "function") {
+      // Runs after the response is already sent - a slow or failing push
+      // fan-out must never delay or break the actual create operation.
+      Promise.resolve()
+        .then(() => afterCreate(newItem, req))
+        .catch((err) => console.error(`afterCreate hook failed for ${file}:`, err));
+    }
   });
 
   router.put("/:id", writeGuard, (req, res) => {
@@ -109,6 +123,24 @@ export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [],
     const idx = items.findIndex((x) => x.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: "غير موجود" });
     const oldValue = items[idx];
+
+    // Optimistic concurrency check: the client must send back the _version
+    // it originally fetched. If someone else saved a change in the meantime,
+    // the current version has moved on and this save is rejected — the
+    // alternative (silently applying it anyway) is exactly the lost-update
+    // bug where two people editing the same record end up with whoever
+    // saved last winning and the other's change vanishing without a trace.
+    if (
+      Object.prototype.hasOwnProperty.call(req.body, "_expectedVersion") &&
+      req.body._expectedVersion !== (oldValue._version || 1)
+    ) {
+      return res.status(409).json({
+        error: "تم تعديل هذا السجل من قبل مستخدم آخر بعد أن قمت بتحميله. يرجى إعادة تحميل الصفحة ومحاولة الحفظ مرة أخرى.",
+        conflict: true,
+        currentVersion: oldValue._version || 1,
+      });
+    }
+
     for (const f of uniqueFields) {
       const val = body[f];
       if (
@@ -120,15 +152,17 @@ export function buildCrudRouter({ file, moduleLabel, feature, uniqueFields = [],
         return res.status(409).json({ error: `القيمة مستخدمة مسبقاً في الحقل: ${f}` });
       }
     }
+    const { _expectedVersion, ...bodyWithoutVersionCheck } = body;
     const updated = {
       ...oldValue,
-      ...body,
+      ...bodyWithoutVersionCheck,
       // Same protection as above: id/creation metadata (including any
       // beforeCreate-generated field like frtNumber) is never client-
       // editable via a later PUT, even accidentally.
       id: oldValue.id,
       createdAt: oldValue.createdAt,
       createdBy: oldValue.createdBy,
+      _version: (oldValue._version || 1) + 1,
       updatedAt: new Date().toISOString(),
       updatedBy: req.user.username,
     };

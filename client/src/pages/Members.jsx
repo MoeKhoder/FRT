@@ -81,7 +81,7 @@ export default function Members() {
     setLoading(true);
     try {
       if (editing) {
-        await api.put(`/members/${editing.id}`, form);
+        await api.put(`/members/${editing.id}`, { ...form, _expectedVersion: editing._version });
         push("تم تحديث بيانات العضو", "success");
       } else {
         await api.post("/members", form);

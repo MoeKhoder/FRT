@@ -58,7 +58,7 @@ export default function Payments() {
     try {
       const body = { ...form, amount };
       if (editing) {
-        await api.put(`/payments/${editing.id}`, body);
+        await api.put(`/payments/${editing.id}`, { ...body, _expectedVersion: editing._version });
         push("تم تحديث الدفعة", "success");
       } else {
         await api.post("/payments", body);
